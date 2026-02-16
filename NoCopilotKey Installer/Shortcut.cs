@@ -61,13 +61,6 @@ namespace NoCopilotKey_Installer
         public static void CreateShortcut(string lnkFileName, string exePath)
         {
             var shellLink = (IShellLinkW)new ShellLinkClass();
-
-            //
-            //11219420-1768-11D1-95BE-00609797EA4F
-            //000214F9-0000-0000-C000-000000000046
-            //00021401-0000-0000-C000-000000000046
-            //var typeOfShellLink = Type.GetTypeFromCLSID(new Guid("00021401-0000-0000-C000-000000000046"), false);
-            //var shellLink = (Shell32.ShellLinkObject)Activator.CreateInstance(typeOfShellLink);
             shellLink.SetPath(exePath);
             var persistFile = (System.Runtime.InteropServices.ComTypes.IPersistFile)shellLink;
             Directory.CreateDirectory(Path.GetDirectoryName(lnkFileName));

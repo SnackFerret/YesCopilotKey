@@ -9,16 +9,6 @@ namespace NoCopilotKey_Installer
 {
     public static class ScheduledTask
     {
-        //static IRegisteredTask EnsureScheduledTask()
-        //{
-        //    string exeName = GetExeName();
-        //    string taskName = "NoCopilotKey";
-        //    string author = "Dan Weiss (www.dwedit.org)";
-        //    string description = "Changes Copilot keyboard key into Right Ctrl key";
-        //
-        //    return CreateScheduledTask(exeName, taskName, author, description);
-        //}
-
         static ITaskService _taskService;
         public static ITaskService GetTaskService()
         {
@@ -124,22 +114,7 @@ namespace NoCopilotKey_Installer
             var taskService = GetTaskService();
             var rootFolder = GetTaskRootFolder();
 
-            ////const string taskName = "NoCopilotKey";
-            //var typeOfTaskService = Type.GetTypeFromCLSID(new Guid("0F87369F-A4E5-4CFC-BD3E-73E6154572DD"));
-            //var taskService = (TaskScheduler.ITaskService)Activator.CreateInstance(typeOfTaskService);
-            ////System.Runtime.InteropServices.VariantWrapper variantWrapper = new System.Runtime.InteropServices.VariantWrapper(null);
-            //taskService.Connect(null, null, null, null);
-            //var rootFolder = taskService.GetFolder("\\");
-
             TaskScheduler.IRegisteredTask registeredTask = null;
-            //try
-            //{
-            //    registeredTask = rootFolder.GetTask(taskName);
-            //}
-            //catch (Exception ex)
-            //{
-            //    //FileNotFoundException
-            //}
             if (registeredTask == null)
             {
                 try

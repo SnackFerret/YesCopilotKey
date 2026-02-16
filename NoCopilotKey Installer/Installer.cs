@@ -103,7 +103,7 @@ namespace NoCopilotKey_Installer
             if (subkey != null)
             {
                 subkey.SetValue("DisplayName", "NoCopilotKey");
-                //subkey.SetValue("DisplayVersion", "1.0.1.0");
+                subkey.SetValue("DisplayVersion", "1.0.1.0");
                 subkey.SetValue("Publisher", "www.dwedit.org");
                 subkey.SetValue("URLInfoAbout", "https://github.com/Dwedit/NoCopilotKey");
                 subkey.SetValue("UninstallString", "\"" + installerExePath + "\" --uninstall");
@@ -207,12 +207,6 @@ namespace NoCopilotKey_Installer
                 return true;
             }
 
-
-            //bool deleteSelfAndDirectory = false;
-            //string deleteFileName1 = null;
-            //string deleteDirectory1 = null;
-
-            //StopProgram();
             if (IsInstalledToProgramFiles())
             {
                 string programDirectory = GetProgramFilesAppDirectory();
@@ -335,7 +329,6 @@ namespace NoCopilotKey_Installer
             var processes = Process.GetProcessesByName("NoCopilotKey");
             foreach (var process in processes)
             {
-                //string exeName = GetProcessFullName(process);
                 process.Kill();
             }
         }
@@ -349,27 +342,6 @@ namespace NoCopilotKey_Installer
         {
             var process = LaunchInstaller2(args, admin);
             return process != null;
-
-            //if (args == null)
-            //{
-            //    args = Environment.GetCommandLineArgs().Skip(1).ToArray();
-            //}
-            //var startInfo = new ProcessStartInfo(Application.ExecutablePath);
-            //startInfo.Arguments = string.Join(" ", args);
-            //if (admin)
-            //{
-            //    startInfo.Verb = "runas";
-            //}
-            //startInfo.UseShellExecute = true;
-            //try
-            //{
-            //    Process.Start(startInfo);
-            //}
-            //catch (Exception ex)
-            //{
-            //    return false;
-            //}
-            //return true;
         }
 
         public static Process LaunchInstaller2(string[] args = null, bool admin = false)
