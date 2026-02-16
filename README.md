@@ -4,11 +4,9 @@ A tiny program that changes the Copilot keyboard key back into the right Ctrl ke
 # Usage
 Download the release from the [Releases page](https://github.com/Dwedit/NoCopilotKey/releases/latest).
 
-Extract all files from the ZIP to the directory you want to keep the program in.
+Run "NoCopilotKey Installer.exe" to install the program and set it up to automatically run.  (Main EXE is also embedded in the installer)
 
-Run "Install NoCopilotKey.bat" to create a Start Menu entry for Startup, this will make the program automatically run.
-
-When you run the program, you won't see anything happen, but it is automatically changing the Copilot key into the right ctrl key.  To close the program, use Task Manager to end NoCopilotKey.
+To stop NoCopilotKey, use Task Manager to end the program.
 
 # Why?
 Because Microsoft required manufacturers to replace the right Ctrl key with a Copilot key, with no BIOS or Windows setting available to change it back.
@@ -66,6 +64,11 @@ Then when you release the Copilot key:
  * After Left Windows key is released, it's done handling the complete keystroke.
 
 # Version History
+
+1.0.1.0
+ * New separate installer can configure the program to run automatically as Admin, or install as a limited user.
+ * Installer can also uninstall the program.
+ * Removed shortcut code from the main exe.
 
 1.0.0.4
  * Fixed startup entry
