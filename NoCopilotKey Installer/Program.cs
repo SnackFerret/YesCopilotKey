@@ -27,10 +27,6 @@ namespace NoCopilotKey_Installer
             InstallationMode installationMode = InstallationMode.Undefined;
             AutoRunMode autoRunMode = AutoRunMode.Undefined;
 
-            //DELETEME
-            //installationMode = InstallationMode.InstallToProgramFiles;
-            //autoRunMode = AutoRunMode.ScheduledTask;
-
             bool doUninstall = false;
             bool doStop = false;
 
@@ -71,7 +67,8 @@ namespace NoCopilotKey_Installer
 
             if (!doUninstall && !doStop && installationMode != InstallationMode.Undefined && autoRunMode != AutoRunMode.Undefined)
             {
-                Installer.Install(installationMode, autoRunMode);
+                bool installOkay = Installer.Install(installationMode, autoRunMode);
+                if (!installOkay) Environment.Exit(1);
                 return;
             }
 

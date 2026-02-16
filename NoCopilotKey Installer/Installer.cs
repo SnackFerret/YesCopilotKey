@@ -67,27 +67,59 @@ namespace NoCopilotKey_Installer
             }
             else
             {
-                throw new InvalidOperationException();
+                throw new ArgumentOutOfRangeException(nameof(installationMode));
             }
             string exePath = Path.Combine(targetDirectory, "NoCopilotKey.exe");
             string installerExePath = Path.Combine(targetDirectory, "NoCopilotKey Installer.exe");
 
-            Directory.CreateDirectory(targetDirectory);
+            try
+            {
+                Directory.CreateDirectory(targetDirectory);
+            }
+            catch
+            {
+                MessageBox.Show("Failed to create directory " + targetDirectory, Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                return false;
+            }
+            StopProgram(exePath);
             bool exeOkay = ExtractExe(exePath);
-            if (!exeOkay) return false;
+            if (!exeOkay)
+            {
+                MessageBox.Show("Failed to extract main EXE to " + exePath, Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                return false;
+            }
             if (!installerExePath.Equals(Application.ExecutablePath, StringComparison.OrdinalIgnoreCase))
             {
-                File.Copy(Application.ExecutablePath, installerExePath, true);
+                try
+                {
+                    File.Copy(Application.ExecutablePath, installerExePath, true);
+                }
+                catch
+                {
+                    MessageBox.Show("Failed to copy installer to " + installerExePath, Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                    return false;
+                }
             }
 
             if (autoRunMode == AutoRunMode.ScheduledTask)
             {
-                ScheduledTask.CreateScheduledTask(exePath, "NoCopilotKey", "Dan Weiss (www.dwedit.org)", "Changes Copilot keyboard key into right ctrl key");
+                var task = ScheduledTask.CreateScheduledTask(exePath, "NoCopilotKey", "Dan Weiss (www.dwedit.org)", "Changes Copilot keyboard key into right ctrl key");
+                if (task == null)
+                {
+                    MessageBox.Show("Failed to create a scheduled task", Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                }
             }
             else if (autoRunMode == AutoRunMode.StartupItem)
             {
                 string lnkFileName = GetStartupShortcutPath();
-                Shortcut.CreateShortcut(lnkFileName, exePath);
+                try
+                {
+                    Shortcut.CreateShortcut(lnkFileName, exePath);
+                }
+                catch
+                {
+                    MessageBox.Show("Failed to create shortcut " + lnkFileName, Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                }
             }
 
             string registryPath = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\NoCopilotKey";
@@ -102,11 +134,18 @@ namespace NoCopilotKey_Installer
             }
             if (subkey != null)
             {
-                subkey.SetValue("DisplayName", "NoCopilotKey");
-                subkey.SetValue("DisplayVersion", "1.0.1.0");
-                subkey.SetValue("Publisher", "www.dwedit.org");
-                subkey.SetValue("URLInfoAbout", "https://github.com/Dwedit/NoCopilotKey");
-                subkey.SetValue("UninstallString", "\"" + installerExePath + "\" --uninstall");
+                try
+                {
+                    subkey.SetValue("DisplayName", "NoCopilotKey");
+                    subkey.SetValue("DisplayVersion", "1.0.1.0");
+                    subkey.SetValue("Publisher", "www.dwedit.org");
+                    subkey.SetValue("URLInfoAbout", "https://github.com/Dwedit/NoCopilotKey");
+                    subkey.SetValue("UninstallString", "\"" + installerExePath + "\" --uninstall");
+                }
+                catch
+                {
+                    MessageBox.Show("Failed write uninstallation information to the registry", Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                }
             }
 
             StopProgram();
@@ -173,8 +212,12 @@ namespace NoCopilotKey_Installer
         {
             bool isInstalledToProgramFiles = IsInstalledToProgramFiles();
             bool isScheduledTask = IsScheduledTask();
+            bool isInstalledToUserProgramFiles = IsInstalledToUserProgramFiles();
+            bool isStartupItem = IsStartupItem();
 
-            if ((isInstalledToProgramFiles || isScheduledTask) && !IsAdmin())
+            bool needAdmin = isInstalledToProgramFiles || isScheduledTask;
+
+            if (needAdmin && !IsAdmin())
             {
                 RestartAsAdmin();
             }
@@ -237,12 +280,23 @@ namespace NoCopilotKey_Installer
             }
             if (IsScheduledTask())
             {
-                ScheduledTask.RemoveScheduledTask("NoCopilotKey");
+                try
+                {
+                    ScheduledTask.RemoveScheduledTask("NoCopilotKey");
+                }
+                catch
+                {
+                    MessageBox.Show("Failed to remove scheduled task", Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                }
             }
             if (IsStartupItem())
             {
                 string startupLnk = GetStartupShortcutPath();
                 bool deletedShortcut = TryDeleteFile(startupLnk);
+                if (!deletedShortcut)
+                {
+                    MessageBox.Show("Failed to delete shortcut " + startupLnk, Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                }
             }
             //remove uninstaller from registry
             string registryPath = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\NoCopilotKey";
@@ -270,14 +324,21 @@ namespace NoCopilotKey_Installer
 
         public static bool IsInstalledToDirectory(string directoryName)
         {
-            if (Directory.Exists(directoryName))
+            try
             {
-                string noCopilotKeyExe = Path.Combine(directoryName, "NoCopilotKey.exe");
-                string noCopilotKeyInstallerExe = Path.Combine(directoryName, "NoCopilotKey Installer.exe");
-                if (File.Exists(noCopilotKeyExe)) return true;
-                if (File.Exists(noCopilotKeyInstallerExe)) return true;
-                if (Directory.EnumerateFileSystemEntries(directoryName).FirstOrDefault() != null) return false;
-                return true;
+                if (Directory.Exists(directoryName))
+                {
+                    string noCopilotKeyExe = Path.Combine(directoryName, "NoCopilotKey.exe");
+                    string noCopilotKeyInstallerExe = Path.Combine(directoryName, "NoCopilotKey Installer.exe");
+                    if (File.Exists(noCopilotKeyExe)) return true;
+                    if (File.Exists(noCopilotKeyInstallerExe)) return true;
+                    if (Directory.EnumerateFileSystemEntries(directoryName).FirstOrDefault() != null) return false;
+                    return true;
+                }
+            }
+            catch
+            {
+
             }
             return false;
         }
@@ -292,12 +353,26 @@ namespace NoCopilotKey_Installer
         }
         public static bool IsScheduledTask()
         {
-            var scheduledTask = ScheduledTask.GetScheduledTask("NoCopilotKey");
-            return scheduledTask != null;
+            try
+            {
+                var scheduledTask = ScheduledTask.GetScheduledTask("NoCopilotKey");
+                return scheduledTask != null;
+            }
+            catch
+            {
+                return false;
+            }
         }
         public static bool IsStartupItem()
         {
-            return File.Exists(GetStartupShortcutPath());
+            try
+            {
+                return File.Exists(GetStartupShortcutPath());
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         [DllImport("kernel32.dll", SetLastError = true)]
@@ -305,7 +380,7 @@ namespace NoCopilotKey_Installer
 
         public static string GetProcessFullName(Process process)
         {
-            int capacity = 1024;
+            int capacity = 32767;
             StringBuilder sb = new StringBuilder(capacity);
             QueryFullProcessImageName(process.Handle, 0, sb, ref capacity);
             return sb.ToString();
@@ -313,23 +388,37 @@ namespace NoCopilotKey_Installer
 
         public static void StopProgram(string exePath)
         {
-            var processes = Process.GetProcessesByName("NoCopilotKey");
-            foreach (var process in processes)
+            try
             {
-                string exeName = GetProcessFullName(process);
-                if (exePath.Equals(exeName, StringComparison.OrdinalIgnoreCase))
+                var processes = Process.GetProcessesByName("NoCopilotKey");
+                foreach (var process in processes)
                 {
-                    process.Kill();
+                    string exeName = GetProcessFullName(process);
+                    if (exePath.Equals(exeName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        process.Kill();
+                    }
                 }
+            }
+            catch
+            {
+
             }
         }
 
         public static void StopProgram()
         {
-            var processes = Process.GetProcessesByName("NoCopilotKey");
-            foreach (var process in processes)
+            try
             {
-                process.Kill();
+                var processes = Process.GetProcessesByName("NoCopilotKey");
+                foreach (var process in processes)
+                {
+                    process.Kill();
+                }
+            }
+            catch
+            {
+
             }
         }
 
