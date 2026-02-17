@@ -81,15 +81,47 @@ namespace NoCopilotKey_Installer
         {
             int exitCode = 1;
             bool needAdmin = Installer.UninstallNeedsAdmin();
+            bool installerNeedsToDeleteItself = false;
+            //check if installer needs to delete itself
+            string installDirectory = "";
+            if (Installer.IsInstalledToProgramFiles())
+            {
+                installDirectory = Installer.GetProgramFilesAppDirectory();
+            }
+            else if (Installer.IsInstalledToUserProgramFiles())
+            {
+                installDirectory = Installer.GetUserProgramFilesAppDirectory();
+            }
+            if (Application.ExecutablePath.StartsWith(installDirectory, StringComparison.OrdinalIgnoreCase))
+            {
+                installerNeedsToDeleteItself = true;
+            }
+            
             if (!(needAdmin && !Installer.IsAdmin()))
             {
                 exitCode = Program.Main2(new string[] { "--uninstall" });
             }
             else
             {
-                Installer.LaunchInstaller(new string[] { "--uninstall" }, needAdmin);
-                //exit immediately so uninstaller can delete itself
-                Environment.Exit(0);
+                var process = Installer.LaunchInstaller2(new string[] { "--uninstall" }, needAdmin);
+                if (installerNeedsToDeleteItself)
+                {
+                    //exit immediately so uninstaller can delete itself
+                    Environment.Exit(0);
+                }
+                else
+                {
+                    if (process != null)
+                    {
+                        this.Enabled = false;
+                        while (!process.WaitForExit(10))
+                        {
+                            Application.DoEvents();
+                        }
+                        exitCode = process.ExitCode;
+                        this.Enabled = true;
+                    }
+                }
             }
             if (exitCode == 0)
             {
