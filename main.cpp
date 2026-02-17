@@ -186,7 +186,10 @@ extern "C"
 	void SetPressState(STATE state)
 	{
 		#if DEBUG
-		DebugPrintf("Press State Transition: %d -> %d\n", pressState, state);
+		if (pressState != state)
+		{
+			DebugPrintf("Press State Transition: %d -> %d\n", pressState, state);
+		}
 		#endif
 		pressState = state;
 	}
@@ -194,7 +197,10 @@ extern "C"
 	void SetReleaseState(STATE state)
 	{
 		#if DEBUG
-		DebugPrintf("Release State Transition: %d -> %d\n", releaseState, state);
+		if (releaseState != state)
+		{
+			DebugPrintf("Release State Transition: %d -> %d\n", releaseState, state);
+		}
 		#endif
 		releaseState = state;
 	}
@@ -216,6 +222,9 @@ extern "C"
 		if (activeTimer == 0)
 		{
 			activeTimer = SetTimer(mainWindow, 1, 100, TimerProc);
+			#if DEBUG
+			DebugPrintf("Timer set\n");
+			#endif	
 		}
 	}
 	void CancelTimer()
@@ -336,6 +345,7 @@ extern "C"
 				else
 				{
 					ReplaySuppressedKeys2();
+					SetPressState(STATE::Idle);
 				}
 			}
 			else if (pressState == STATE::LeftShift)
@@ -356,6 +366,7 @@ extern "C"
 				else
 				{
 					ReplaySuppressedKeys2();
+					SetPressState(STATE::Idle);
 				}
 			}
 		}
@@ -366,6 +377,7 @@ extern "C"
 				bool leftWindowsWasSuppressed = leftWindowsSuppressed;
 				bool leftShiftWasSuppressed = leftShiftSuppressed;
 				ReplaySuppressedKeys2();
+				SetPressState(STATE::Idle);
 				//Game Bar is weird, you need to inject a key up event and suppress the real key up
 				//otherwise Game Bar sees the injected Key Down after the real Key Up.
 				if (leftWindowsWasSuppressed && keyCode == VK_LWIN)
