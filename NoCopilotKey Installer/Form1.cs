@@ -46,8 +46,27 @@ namespace NoCopilotKey_Installer
 
         void Uninstall()
         {
-            Installer.LaunchInstaller(new string[] { "--uninstall" });
-            Environment.Exit(0);
+            int exitCode = 1;
+            bool needAdmin = Installer.UninstallNeedsAdmin();
+            if (!(needAdmin && !Installer.IsAdmin()))
+            {
+                exitCode = Program.Main2(new string[] { "--uninstall" });
+            }
+            else
+            {
+                Installer.LaunchInstaller(new string[] { "--uninstall" }, needAdmin);
+                //exit immediately so uninstaller can delete itself
+                Environment.Exit(0);
+            }
+            if (exitCode == 0)
+            {
+                MessageBox.Show(this, "Uninstall Successful", "NoCopilotKey", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            else
+            {
+                MessageBox.Show(this, "Uninstall Failed", "NoCopilotKey", MessageBoxButtons.OK, MessageBoxIcon.Stop);
+            }
+            this.uninstallButton.Enabled = Installer.CanUninstall();
         }
 
         private void installButton_Click(object sender, EventArgs e)
@@ -57,29 +76,37 @@ namespace NoCopilotKey_Installer
 
         void Install()
         {
+            bool needAdmin = false;
             List<string> args = new List<string>();
             if (this.optProgramFiles.Checked)
             {
                 args.Add("--install-to-program-files");
                 args.Add("--register-as-scheduled-task");
+                needAdmin = true;
             }
             else if (this.optUserProgramFiles.Checked)
             {
                 args.Add("--install-to-user-program-files");
                 args.Add("--register-as-startup-item");
             }
-            var process = Installer.LaunchInstaller2(args.ToArray());
             int exitCode = 1;
-            if (process != null)
+            if (!(needAdmin && !Installer.IsAdmin()))
             {
-                this.Enabled = false;
-                while (!process.WaitForExit(10))
+                exitCode = Program.Main2(args.ToArray());
+            }
+            else
+            {
+                var process = Installer.LaunchInstaller2(args.ToArray(), needAdmin);
+                if (process != null)
                 {
-                    Application.DoEvents();
+                    this.Enabled = false;
+                    while (!process.WaitForExit(10))
+                    {
+                        Application.DoEvents();
+                    }
+                    exitCode = process.ExitCode;
+                    this.Enabled = true;
                 }
-                exitCode = process.ExitCode;
-                this.Enabled = true;
-
             }
             if (exitCode == 0)
             {

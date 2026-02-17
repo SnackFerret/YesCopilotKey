@@ -20,9 +20,10 @@ namespace NoCopilotKey_Installer
         public static void Main()
         {
             var args = Environment.GetCommandLineArgs();
-            Main2(args);
+            int exitCode = Main2(args);
+            Environment.ExitCode = exitCode;
         }
-        public static void Main2(string[] args)
+        public static int Main2(string[] args)
         {
             InstallationMode installationMode = InstallationMode.Undefined;
             AutoRunMode autoRunMode = AutoRunMode.Undefined;
@@ -68,20 +69,23 @@ namespace NoCopilotKey_Installer
             if (!doUninstall && !doStop && installationMode != InstallationMode.Undefined && autoRunMode != AutoRunMode.Undefined)
             {
                 bool installOkay = Installer.Install(installationMode, autoRunMode);
-                if (!installOkay) Environment.Exit(1);
-                return;
+                if (!installOkay) return 1;
+                return 0;
             }
 
             if (doUninstall)
             {
-                Installer.Uninstall();
-                return;
+                bool uninstallOkay = Installer.Uninstall();
+                if (!uninstallOkay) return 1;
+                return 0;
             }
 
             if (doStop)
             {
-                Installer.StopProgram();
-                return;
+                var status = Installer.StopProgram();
+                if (status.HasFlag(Installer.StopProgramStatus.FailedToStop)) return 1;
+                if (status == Installer.StopProgramStatus.NotFound) return 2;
+                return 0;
             }
 
             var currentProcess = Process.GetCurrentProcess();
@@ -93,7 +97,7 @@ namespace NoCopilotKey_Installer
                         Application.ExecutablePath.Equals(Installer.GetProcessFullName(instance), StringComparison.OrdinalIgnoreCase))
                     {
                         SetForegroundWindow(instance.MainWindowHandle);
-                        Environment.Exit(1);
+                        return 1;
                     }
                 }
                 foreach (var instance in instances)
@@ -101,12 +105,10 @@ namespace NoCopilotKey_Installer
                     instance.Dispose();
                 }
             }
-
-
-
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
             Application.Run(new Form1());
+            return Environment.ExitCode;
         }
 
 

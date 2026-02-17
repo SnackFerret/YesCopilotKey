@@ -81,7 +81,12 @@ namespace NoCopilotKey_Installer
                 MessageBox.Show("Failed to create directory " + targetDirectory, Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Stop);
                 return false;
             }
-            StopProgram(exePath);
+            var stopStatus = StopProgram(exePath);
+            if (stopStatus.HasFlag(StopProgramStatus.FailedToStop))
+            {
+                MessageBox.Show("Failed to stop process " + exePath, Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                return false;
+            }
             bool exeOkay = ExtractExe(exePath);
             if (!exeOkay)
             {
@@ -137,7 +142,7 @@ namespace NoCopilotKey_Installer
                 try
                 {
                     subkey.SetValue("DisplayName", "NoCopilotKey");
-                    subkey.SetValue("DisplayVersion", "1.0.1.0");
+                    subkey.SetValue("DisplayVersion", "1.0.1.2");
                     subkey.SetValue("Publisher", "www.dwedit.org");
                     subkey.SetValue("URLInfoAbout", "https://github.com/Dwedit/NoCopilotKey");
                     subkey.SetValue("UninstallString", "\"" + installerExePath + "\" --uninstall");
@@ -148,7 +153,12 @@ namespace NoCopilotKey_Installer
                 }
             }
 
-            StopProgram();
+            //close other instances
+            stopStatus = StopProgram();
+            if (stopStatus.HasFlag(StopProgramStatus.FailedToStop))
+            {
+                MessageBox.Show("Failed to stop other running instances");
+            }
             Process.Start(exePath);
             return true;
         }
@@ -207,9 +217,14 @@ namespace NoCopilotKey_Installer
                 return false;
             }
         }
-
-        public static void Uninstall()
+        public static bool UninstallNeedsAdmin()
         {
+            return IsInstalledToProgramFiles() || IsScheduledTask();
+        }
+
+        public static bool Uninstall()
+        {
+            bool anyFailures = false;
             bool isInstalledToProgramFiles = IsInstalledToProgramFiles();
             bool isScheduledTask = IsScheduledTask();
             bool isInstalledToUserProgramFiles = IsInstalledToUserProgramFiles();
@@ -250,35 +265,35 @@ namespace NoCopilotKey_Installer
                 return true;
             }
 
-            if (IsInstalledToProgramFiles())
+            var deleteOperations = new[]
             {
-                string programDirectory = GetProgramFilesAppDirectory();
-                string exeName = Path.Combine(programDirectory, "NoCopilotKey.exe");
-                string installerExeName = Path.Combine(programDirectory, "NoCopilotKey Installer.exe");
-                string installerExeName2 = Path.Combine(programDirectory, "NoCopilotKey Installer.pdb");
-                string installerExeName3 = Path.Combine(programDirectory, "NoCopilotKey Installer.exe.config");
-                StopProgram(exeName);
-                bool deletedExe = TryDeleteFile2(exeName);
-                bool deletedInstaller1 = TryDeleteFile2(installerExeName);
-                bool deletedInstaller2 = TryDeleteFile2(installerExeName2);
-                bool deletedInstaller3 = TryDeleteFile2(installerExeName3);
-                bool deletedDirectory = TryDeleteDirectory2(programDirectory);
-            }
-            if (IsInstalledToUserProgramFiles())
+                (isInstalledToProgramFiles, GetProgramFilesAppDirectory()),
+                (isInstalledToUserProgramFiles, GetUserProgramFilesAppDirectory())
+            };
+            foreach (var pair in deleteOperations)
             {
-                string programDirectory = GetUserProgramFilesAppDirectory();
-                string exeName = Path.Combine(programDirectory, "NoCopilotKey.exe");
-                string installerExeName = Path.Combine(programDirectory, "NoCopilotKey Installer.exe");
-                string installerExeName2 = Path.Combine(programDirectory, "NoCopilotKey Installer.pdb");
-                string installerExeName3 = Path.Combine(programDirectory, "NoCopilotKey Installer.exe.config");
-                StopProgram(exeName);
-                bool deletedExe = TryDeleteFile2(exeName);
-                bool deletedInstaller1 = TryDeleteFile2(installerExeName);
-                bool deletedInstaller2 = TryDeleteFile2(installerExeName2);
-                bool deletedInstaller3 = TryDeleteFile2(installerExeName3);
-                bool deletedDirectory = TryDeleteDirectory2(programDirectory);
+                bool doThisOperation = pair.Item1;
+                string programDirectory = pair.Item2;
+                if (doThisOperation)
+                {
+                    string exeName = Path.Combine(programDirectory, "NoCopilotKey.exe");
+                    string installerExeName = Path.Combine(programDirectory, "NoCopilotKey Installer.exe");
+                    string installerExeName2 = Path.Combine(programDirectory, "NoCopilotKey Installer.pdb");
+                    string installerExeName3 = Path.Combine(programDirectory, "NoCopilotKey Installer.exe.config");
+                    var stopStatus = StopProgram(exeName);
+                    if (stopStatus.HasFlag(StopProgramStatus.FailedToStop))
+                    {
+                        anyFailures = true;
+                        MessageBox.Show("Failed to stop process " + exeName, Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                    }
+                    bool deletedExe = TryDeleteFile2(exeName);
+                    bool deletedInstaller1 = TryDeleteFile2(installerExeName);
+                    bool deletedInstaller2 = TryDeleteFile2(installerExeName2);
+                    bool deletedInstaller3 = TryDeleteFile2(installerExeName3);
+                    bool deletedDirectory = TryDeleteDirectory2(programDirectory);
+                }
             }
-            if (IsScheduledTask())
+            if (isScheduledTask)
             {
                 try
                 {
@@ -286,22 +301,55 @@ namespace NoCopilotKey_Installer
                 }
                 catch
                 {
-                    MessageBox.Show("Failed to remove scheduled task", Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                    MessageBox.Show("Failed to remove scheduled task.", Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                    anyFailures = true;
                 }
             }
-            if (IsStartupItem())
+            if (isStartupItem)
             {
                 string startupLnk = GetStartupShortcutPath();
                 bool deletedShortcut = TryDeleteFile(startupLnk);
                 if (!deletedShortcut)
                 {
                     MessageBox.Show("Failed to delete shortcut " + startupLnk, Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                    anyFailures = true;
                 }
             }
             //remove uninstaller from registry
             string registryPath = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\NoCopilotKey";
-            Microsoft.Win32.Registry.CurrentUser.DeleteSubKeyTree(registryPath, false);
-            Microsoft.Win32.Registry.LocalMachine.DeleteSubKeyTree(registryPath, false);
+            bool uninstallerRemovedFromRegistry = false;
+            bool registryKeyExists = false;
+
+            var registryOperations = new[]
+            {
+                (isInstalledToProgramFiles, Microsoft.Win32.Registry.LocalMachine),
+                (isInstalledToUserProgramFiles, Microsoft.Win32.Registry.CurrentUser)
+            };
+            foreach (var pair in registryOperations)
+            {
+                bool doThisOperation = pair.Item1;
+                var baseRegistryKey = pair.Item2;
+                if (doThisOperation)
+                {
+                    try
+                    {
+                        var existingKey = baseRegistryKey.OpenSubKey(registryPath, false);
+                        if (existingKey != null)
+                        {
+                            registryKeyExists = true;
+                            existingKey.Dispose();
+                        }
+                        baseRegistryKey.DeleteSubKeyTree(registryPath, true);
+                        uninstallerRemovedFromRegistry = true;
+                    }
+                    catch
+                    {
+                        uninstallerRemovedFromRegistry = false;
+                        if (registryKeyExists) anyFailures = true;
+                        MessageBox.Show("Failed to remove uninstallation information from the registry.", Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                    }
+                }
+            }
 
             if (filesToDelete.Count > 0 || directoriesToDelete.Count > 0)
             {
@@ -317,9 +365,13 @@ namespace NoCopilotKey_Installer
                 }
                 startInfo.CreateNoWindow = true;
                 startInfo.UseShellExecute = false;
+                //to ensure that working directory is not the uninstallation directory and prevent it from being locked, switch to Windows directory before running the command
+                startInfo.WorkingDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+
                 Process.Start(startInfo);
                 Environment.Exit(0);
             }
+            return !anyFailures;
         }
 
         public static bool IsInstalledToDirectory(string directoryName)
@@ -386,8 +438,17 @@ namespace NoCopilotKey_Installer
             return sb.ToString();
         }
 
-        public static void StopProgram(string exePath)
+        [Flags]
+        public enum StopProgramStatus
         {
+            NotFound = 0,
+            Success = 1,
+            FailedToStop = 2,
+        }
+
+        public static StopProgramStatus StopProgram(string exePath)
+        {
+            StopProgramStatus status = 0;
             try
             {
                 var processes = Process.GetProcessesByName("NoCopilotKey");
@@ -397,29 +458,36 @@ namespace NoCopilotKey_Installer
                     if (exePath.Equals(exeName, StringComparison.OrdinalIgnoreCase))
                     {
                         process.Kill();
+                        process.WaitForExit();
+                        status |= StopProgramStatus.Success;
                     }
                 }
             }
             catch
             {
-
+                status |= StopProgramStatus.FailedToStop;
             }
+            return status;
         }
 
-        public static void StopProgram()
+        public static StopProgramStatus StopProgram()
         {
+            StopProgramStatus status = 0;
             try
             {
                 var processes = Process.GetProcessesByName("NoCopilotKey");
                 foreach (var process in processes)
                 {
                     process.Kill();
+                    process.WaitForExit();
+                    status |= StopProgramStatus.Success;
                 }
             }
             catch
             {
-
+                status |= StopProgramStatus.FailedToStop;
             }
+            return status;
         }
 
         public static bool LaunchAsAdmin(string[] args = null)
@@ -442,7 +510,7 @@ namespace NoCopilotKey_Installer
 
             var startInfo = new ProcessStartInfo(Application.ExecutablePath);
             startInfo.Arguments = string.Join(" ", args);
-            if (admin)
+            if (admin && !IsAdmin())
             {
                 startInfo.Verb = "runas";
             }
