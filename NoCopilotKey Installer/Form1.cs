@@ -24,7 +24,40 @@ namespace NoCopilotKey_Installer
             this.pictureBox1.Image = System.Drawing.SystemIcons.Shield.ToBitmap();
             this.pictureBox1.Left = this.optProgramFiles.Left + this.optProgramFiles.Width + 0;
             this.pictureBox1.Top = this.optProgramFiles.Top + (this.optProgramFiles.Height - this.pictureBox1.Height) / 2;
+            RefreshButtons();
+        }
+
+        void RefreshButtons()
+        {
             this.uninstallButton.Enabled = Installer.CanUninstall();
+            bool isInstalled = false;
+            if (Installer.IsInstalledToProgramFiles())
+            {
+                optUserProgramFiles.Enabled = false;
+                optProgramFiles.Enabled = true;
+                optProgramFiles.Checked = true;
+                isInstalled = true;
+            }
+            else if (Installer.IsInstalledToUserProgramFiles())
+            {
+                optProgramFiles.Enabled = false;
+                optUserProgramFiles.Enabled = true;
+                optUserProgramFiles.Checked = true;
+                isInstalled = true;
+            }
+            else
+            {
+                optUserProgramFiles.Enabled = true;
+                optProgramFiles.Enabled = true;
+            }
+            if (isInstalled)
+            {
+                label1.Text = "Program is already installed." + Environment.NewLine + "To change the installation mode, uninstall the program first.";
+            }
+            else
+            {
+                label1.Text = "To support applications which run as Administrator, NoCopilotKey must be installed to run as Administrator.";
+            }
         }
 
         static bool IsInstalledToProgramFiles()
@@ -66,7 +99,7 @@ namespace NoCopilotKey_Installer
             {
                 MessageBox.Show(this, "Uninstall Failed", "NoCopilotKey", MessageBoxButtons.OK, MessageBoxIcon.Stop);
             }
-            this.uninstallButton.Enabled = Installer.CanUninstall();
+            RefreshButtons();
         }
 
         private void installButton_Click(object sender, EventArgs e)
@@ -116,7 +149,7 @@ namespace NoCopilotKey_Installer
             {
                 MessageBox.Show(this, "Installation Failed", "NoCopilotKey", MessageBoxButtons.OK, MessageBoxIcon.Stop);
             }
-            this.uninstallButton.Enabled = Installer.CanUninstall();
+            RefreshButtons();
         }
     }
 }
