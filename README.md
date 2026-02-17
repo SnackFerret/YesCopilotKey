@@ -65,6 +65,11 @@ Then when you release the Copilot key:
 
 # Version History
 
+1.0.1.2
+ * Installer can now correctly close the program to upgrade it (forgot to wait for process to finish closing)
+ * Installer no longer lets you install as both Administrator and regular user.
+ * Other cleanup for installer
+
 1.0.1.1
  * Fixed logic error in tracking the keyboard state
 
