@@ -65,6 +65,9 @@ Then when you release the Copilot key:
 
 # Version History
 
+1.0.1.1
+ * Fixed logic error in tracking the keyboard state
+
 1.0.1.0
  * New separate installer can configure the program to run automatically as Admin, or install as a limited user.
  * Installer can also uninstall the program.
