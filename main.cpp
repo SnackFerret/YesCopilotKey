@@ -221,7 +221,7 @@ extern "C"
 	{
 		if (activeTimer == 0)
 		{
-			activeTimer = SetTimer(mainWindow, 1, 100, TimerProc);
+			activeTimer = SetTimer(mainWindow, 1, 10, TimerProc);
 			#if DEBUG
 			DebugPrintf("Timer set\n");
 			#endif	
