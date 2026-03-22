@@ -1,2 +1,2 @@
 # YesCopilotKey
-A tiny program that changes the left ALT key into a Left Copilot key.
+A tiny program that changes the right ALT key into a Right Copilot key.
