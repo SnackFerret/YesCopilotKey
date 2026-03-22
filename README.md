@@ -1,5 +1,5 @@
-# NoCopilotKey
-A tiny program that changes the Copilot keyboard key back into the right Ctrl key.
+# YesCopilotKey
+A tiny program that changes the left ALT key into a Left Copilot key.
 
 # Usage
 Download the release from the [Releases page](https://github.com/Dwedit/NoCopilotKey/releases/latest).
